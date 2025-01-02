@@ -19,6 +19,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Red"
 include(":app")
- 
+include(":main")
+include(":splash")
+include(":posts")

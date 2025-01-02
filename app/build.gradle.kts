@@ -6,13 +6,12 @@ plugins {
 
 android {
     namespace = "com.xin.dev.red"
-    compileSdk = 35
+    compileSdk = rootProject.ext["compileSdk"] as Int
 
     defaultConfig {
         applicationId = "com.xin.dev.red"
-        minSdk = 24
-        targetSdk = 35
-        versionCode = 1
+        minSdk = rootProject.ext["minSdk"] as Int
+        targetSdk = rootProject.ext["targetSdk"] as Int
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -56,4 +55,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    implementation(project(":main"))
+    implementation(project(":splash"))
+    implementation(project(":posts"))
 }

@@ -1,4 +1,4 @@
-package com.xin.dev.red
+package com.xin.dev.main
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
