@@ -1,3 +1,6 @@
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -37,6 +40,20 @@ android {
         compose = true
     }
 }
+
+android.applicationVariants.all {
+    outputs.all {
+        if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
+            val config = project.android.defaultConfig
+            val versionName = config.versionName
+            val formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmm")
+            val createTime = LocalDateTime.now().format(formatter)
+            this.outputFileName =
+                "${rootProject.name}_${this.name}_${versionName}_$createTime.apk"
+        }
+    }
+}
+
 
 dependencies {
 
