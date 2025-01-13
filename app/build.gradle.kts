@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.xin.dev.red"
-    compileSdk = rootProject.ext["compileSdk"] as Int
+    compileSdk = rootProject.extra["compileSdk"] as Int
 
     defaultConfig {
         applicationId = "com.xin.dev.red"
-        minSdk = rootProject.ext["minSdk"] as Int
-        targetSdk = rootProject.ext["targetSdk"] as Int
+        minSdk = rootProject.extra["minSdk"] as Int
+        targetSdk = rootProject.extra["targetSdk"] as Int
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -74,8 +74,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation(project(":modulex-api"))
+//    ksp(project(':modulex-processor'))
+    implementation(project(":main:core"))
 
-    implementation(project(":main"))
     implementation(project(":splash"))
     implementation(project(":posts"))
 }

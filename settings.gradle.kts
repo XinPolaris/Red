@@ -20,8 +20,9 @@ dependencyResolutionManagement {
 }
 
 include(":app")
-include(":main")
+include(":main:core")
 include(":splash")
 include(":posts")
 include(":modulex-api")
 include(":modulex-processor")
+include(":main:api")
