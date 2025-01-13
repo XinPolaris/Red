@@ -73,6 +73,8 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+    implementation(project(":modulex-api"))
+
     implementation(project(":main"))
     implementation(project(":splash"))
     implementation(project(":posts"))
