@@ -1,9 +1,7 @@
 package com.axon.dev.modulex
 
 import android.app.Application
-import android.util.Log
 import com.axon.dev.modulex.impl.ModuleXImpl
-import com.axon.dev.modulex.proxy.IAppProxy
 
 /**
  *  Created by HuangXin on 2025/1/13.
