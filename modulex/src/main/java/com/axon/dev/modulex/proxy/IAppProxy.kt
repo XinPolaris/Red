@@ -6,7 +6,7 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  *  Created by HuangXin on 2025/1/13.
  */
-internal open class IAppProxy {
+open class IAppProxy {
     private val modules = mutableListOf<IModuleProxy>()
     internal val services = ConcurrentHashMap<Class<*>, Creator<*>>()
 

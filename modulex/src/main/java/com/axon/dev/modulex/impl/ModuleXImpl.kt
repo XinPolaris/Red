@@ -1,9 +1,11 @@
-package com.axon.dev.modulex.api.impl
+package com.axon.dev.modulex.impl
 
 import android.app.Application
 import android.util.Log
 import com.axon.dev.modulex.ModuleX
 import com.axon.dev.modulex.proxy.IAppProxy
+import com.axon.dev.modulex.util.Utils
+import java.lang.reflect.Method
 import java.lang.reflect.Proxy
 import java.util.concurrent.ConcurrentHashMap
 
@@ -12,13 +14,12 @@ import java.util.concurrent.ConcurrentHashMap
  */
 @Suppress("UNCHECKED_CAST")
 internal class ModuleXImpl {
-    private val appProxyName = "com.axon.dev.modulex.ksp._AppProxy"
     private val servicesMap = ConcurrentHashMap<Class<*>, Any>()
     private lateinit var appProxy: IAppProxy
 
     fun init(application: Application) {
         try {
-            val clazz = Class.forName(appProxyName)
+            val clazz = Class.forName("${NAME_APP_PACKAGE}.${NAME_APP_NAME}")
             appProxy = clazz.getDeclaredConstructor().newInstance() as? IAppProxy ?: IAppProxy()
         } catch (cls: ClassNotFoundException) {
             Log.e(TAG, "ModuleX initialization failed")
@@ -36,10 +37,19 @@ internal class ModuleXImpl {
         servicesMap[clazz] ?: run {
             var newInstance = appProxy.services[clazz]?.create() as? T
             if (newInstance == null) {
-                Log.e(TAG, "No implementation class found for the interface $clazz")
+                Log.e(TAG, "No implementation class found for the $clazz")
                 newInstance = Proxy.newProxyInstance(
                     clazz.classLoader, arrayOf(clazz)
-                ) { _, _, _ -> null } as T?
+                ) { _: Any?, method: Method, _: Array<Any?>? ->
+                    Log.e(
+                        TAG,
+                        "No implementation class found for the ${clazz.name}, method invoke fail: ${method.name}()"
+                    )
+                    if (method.returnType.isPrimitive) {
+                        return@newProxyInstance Utils.getDefaultValueForPrimitiveType(method.returnType)
+                    }
+                    null
+                } as T?
             }
             servicesMap[clazz] = newInstance!!
         }
@@ -48,5 +58,7 @@ internal class ModuleXImpl {
 
     companion object {
         private const val TAG = ModuleX.TAG
+        private const val NAME_APP_PACKAGE = "com.axon.dev.modulex.apppxy"
+        private const val NAME_APP_NAME = "com_axon_dev_modulex_AppProxy"
     }
 }
