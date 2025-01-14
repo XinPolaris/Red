@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -73,8 +74,9 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    implementation(project(":modulex-api"))
-//    ksp(project(':modulex-processor'))
+    implementation(project(":modulex"))
+    ksp(project(":modulex-processor"))
+
     implementation(project(":main:core"))
 
     implementation(project(":splash"))
