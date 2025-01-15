@@ -35,6 +35,7 @@ android {
 dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
+    implementation(libs.androidx.appcompat)
 
     api(project(":modulex-anno"))
 }

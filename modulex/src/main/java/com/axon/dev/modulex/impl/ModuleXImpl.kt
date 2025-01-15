@@ -1,8 +1,15 @@
 package com.axon.dev.modulex.impl
 
+import android.app.Activity
 import android.app.Application
+import android.app.Fragment
 import android.util.Log
+import android.view.View
 import com.axon.dev.modulex.ModuleX
+import com.axon.dev.modulex.placeholder.PlaceholderActivity
+import com.axon.dev.modulex.placeholder.PlaceholderFragment
+import com.axon.dev.modulex.placeholder.PlaceholderFragmentX
+import com.axon.dev.modulex.placeholder.PlaceholderView
 import com.axon.dev.modulex.proxy.AppProxy
 import com.axon.dev.modulex.util.Utils
 import java.lang.reflect.Method
@@ -54,6 +61,24 @@ internal class ModuleXImpl {
             servicesMap[clazz] = newInstance!!
         }
         return servicesMap[clazz] as T
+    }
+
+    fun clazzView(uri: String): Class<out View> {
+        return (appProxy.clazzMap[uri] ?: PlaceholderView::class.java) as Class<out View>
+    }
+
+    fun clazzFragment(uri: String): Class<out Fragment> {
+        return (appProxy.clazzMap[uri] ?: PlaceholderFragment::class.java) as Class<out Fragment>
+    }
+
+    fun clazzFragmentX(uri: String): Class<out androidx.fragment.app.Fragment> {
+        return (appProxy.clazzMap[uri]
+            ?: PlaceholderFragmentX::class.java) as Class<out androidx.fragment.app.Fragment>
+    }
+
+    fun clazzActivity(uri: String): Class<out Activity> {
+        return (appProxy.clazzMap[uri]
+            ?: PlaceholderActivity::class.java) as Class<out Activity>
     }
 
     companion object {

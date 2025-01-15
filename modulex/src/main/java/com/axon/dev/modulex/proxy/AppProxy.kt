@@ -9,11 +9,13 @@ import java.util.concurrent.ConcurrentHashMap
 open class AppProxy {
     private val modules = mutableListOf<ModuleProxy>()
     internal val services = ConcurrentHashMap<Class<*>, Creator<*>>()
+    internal val clazzMap = ConcurrentHashMap<String, Class<*>>()
 
     fun init() {
         initModules(modules)
         modules.forEach { module ->
             module.initServices(services)
+            module.initClazz(clazzMap)
         }
     }
 

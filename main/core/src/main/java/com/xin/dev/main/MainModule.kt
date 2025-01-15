@@ -10,6 +10,7 @@ import com.axon.dev.modulex.api.anno.Module
  */
 @Module
 class MainModule : IModule {
+
     override fun onCreate(application: Application) {
         Log.i(TAG, "onCreate: ")
     }

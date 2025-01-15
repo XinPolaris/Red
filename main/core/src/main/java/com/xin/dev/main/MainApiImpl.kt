@@ -22,3 +22,27 @@ class MainApiImpl : MainApi {
         private const val TAG = "MainApiImpl"
     }
 }
+
+interface IMainService1 {}
+
+@Service
+class MainService1 : IMainService1 {
+}
+
+interface IMainService2 {}
+
+@Service
+class MainService2 : IMainService2 {
+}
+
+interface IMainService3 {}
+
+@Service
+class MainService3 : IMainService3 {
+}
+
+interface IMainService4 {}
+
+@Service
+class MainService4 : IMainService4 {
+}

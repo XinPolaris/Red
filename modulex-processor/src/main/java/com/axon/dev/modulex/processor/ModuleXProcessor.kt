@@ -5,61 +5,121 @@ import com.axon.dev.modulex.api.anno.Clazz
 import com.axon.dev.modulex.api.anno.Module
 import com.axon.dev.modulex.api.anno.Service
 import com.google.devtools.ksp.KspExperimental
+import com.google.devtools.ksp.getVisibility
 import com.google.devtools.ksp.processing.Dependencies
 import com.google.devtools.ksp.processing.Resolver
 import com.google.devtools.ksp.processing.SymbolProcessor
 import com.google.devtools.ksp.processing.SymbolProcessorEnvironment
 import com.google.devtools.ksp.processing.SymbolProcessorProvider
+import com.google.devtools.ksp.symbol.ClassKind
 import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
-import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSVisitorVoid
+import com.google.devtools.ksp.symbol.Visibility
 
 class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : SymbolProcessor {
 
+    private lateinit var resolver: Resolver
     private val serviceImplSet = mutableSetOf<KSClassDeclaration>()
-    private val clazzSet = mutableSetOf<KSClassDeclaration>()
+    private val clazzMap = mutableMapOf<String, KSClassDeclaration>()
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
-        val ret = mutableListOf<KSAnnotated>()
-        process(resolver, Clazz::class.qualifiedName!!, ClazzKSVisitor())
-        process(resolver, Service::class.qualifiedName!!, ServiceKSVisitor())
-        process(resolver, Module::class.qualifiedName!!, ModuleKSVisitor(environment))
-        process(resolver, App::class.qualifiedName!!, AppKSVisitor(resolver, environment))
-        return ret
+        this.resolver = resolver
+        processClazz()
+        processService()
+        processModuleProxy()
+        processAppProxy()
+        return listOf()
     }
 
-    private fun process(
-        resolver: Resolver,
-        annotationName: String,
-        visitor: KSVisitorVoid
-    ) {
-        val symbols = resolver.getSymbolsWithAnnotation(annotationName)
+    private fun processClazz() {
+        val symbols = resolver.getSymbolsWithAnnotation(Clazz::class.qualifiedName!!)
         symbols.toList().forEach { declaration ->
-            if (declaration !is KSClassDeclaration) {
-                val qualifiedName =
-                    (declaration as? KSDeclaration)?.qualifiedName?.asString() ?: "Unknown"
-                throw IllegalArgumentException("Expected a class, but found: $qualifiedName.($annotationName)")
+            if (declaration is KSClassDeclaration) {
+                // 获取注解参数
+                val clazzAnnotation =
+                    declaration.annotations.firstOrNull { it.shortName.asString() == Clazz::class.simpleName }
+
+                // 获取uri参数
+                val uriValue =
+                    clazzAnnotation?.arguments?.firstOrNull { it.name?.asString() == "uri" }?.value as? String
+                if (uriValue.isNullOrEmpty()) {
+                    throw RuntimeException("@Clazz's uri parameter must be non-empty and unique (Location: ${declaration.qualifiedName?.asString()})")
+                }
+                // 执行你的访问器
+                declaration.accept(ClazzKSVisitor(uriValue), Unit)
             }
-            declaration.accept(visitor, Unit)
         }
     }
 
-    inner class ClazzKSVisitor : KSVisitorVoid() {
+    private fun processService() {
+        val symbols = resolver.getSymbolsWithAnnotation(Service::class.qualifiedName!!)
+        symbols.toList().forEach { declaration ->
+            declaration.accept(ServiceKSVisitor(), Unit)
+        }
+    }
+
+    private fun processModuleProxy() {
+        val symbols = resolver.getSymbolsWithAnnotation(Module::class.qualifiedName!!)
+        val annotatedClass = symbols.toList()
+        if (annotatedClass.size > 1) {
+            throw RuntimeException("Only one class can have the @Module annotation in a component")
+        }
+        annotatedClass.forEach { declaration ->
+            declaration.accept(ModuleKSVisitor(), Unit)
+        }
+    }
+
+    private fun processAppProxy() {
+        val symbols = resolver.getSymbolsWithAnnotation(App::class.qualifiedName!!)
+        val annotatedClass = symbols.toList()
+        if (annotatedClass.size > 1) {
+            throw RuntimeException("Only one class can have the @App annotation in a component")
+        }
+        annotatedClass.forEach { declaration ->
+            declaration.accept(AppKSVisitor(), Unit)
+        }
+    }
+
+    inner class ClazzKSVisitor(private val uri: String) : KSVisitorVoid() {
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
-            clazzSet.add(classDeclaration)
+            clazzMap[uri] = classDeclaration
         }
     }
 
     inner class ServiceKSVisitor : KSVisitorVoid() {
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
+            // 检查类是否是 public
+            if (classDeclaration.getVisibility() != Visibility.PUBLIC) {
+                throw RuntimeException("@Service annotated class (${classDeclaration.simpleName.asString()}) must be public.")
+            }
+            // 检查类是否实现了多个接口或者没有实现接口
+            val interfaces =
+                classDeclaration.superTypes.filter { superType -> (superType.resolve().declaration as? KSClassDeclaration)?.classKind == ClassKind.INTERFACE }
+                    .toList()
+
+            if (interfaces.isEmpty()) {
+                throw RuntimeException("@Service annotated class (${classDeclaration.simpleName.asString()}) must implement one interface, which is typically exposed to other components.")
+            }
+
+            if (interfaces.size > 1) {
+                throw RuntimeException("@Service annotated class (${classDeclaration.simpleName.asString()}) cannot implement multiple interfaces.")
+            }
             serviceImplSet.add(classDeclaration)
         }
     }
 
-    inner class ModuleKSVisitor(private val environment: SymbolProcessorEnvironment) :
-        KSVisitorVoid() {
+    inner class ModuleKSVisitor : KSVisitorVoid() {
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
+            // 检查类是否是 public
+            if (classDeclaration.getVisibility() != Visibility.PUBLIC) {
+                throw RuntimeException("@Module annotated class (${classDeclaration.qualifiedName?.asString()}) must be public.")
+            }
+            if (!classDeclaration.superTypes.any {
+                    it.resolve().declaration.qualifiedName?.asString() == "com.axon.dev.modulex.api.IModule"
+                }) {
+                throw RuntimeException("@Module annotated class (${classDeclaration.qualifiedName?.asString()}) must implement the IModule interface!")
+            }
             // 获取类名和包名
             val className = classDeclaration.simpleName.asString()
             val packageName = classDeclaration.packageName.asString()
@@ -100,6 +160,14 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
                     }
                 }
                 appendLine("    }")
+                appendLine()
+                // 生成initClazz方法
+                appendLine("    override fun initClazz(clazzMap: MutableMap<String, Class<*>>) {")
+                clazzMap.entries.forEach { entry ->
+                    appendLine("        clazzMap[\"${entry.key}\"] = ${entry.value.qualifiedName!!.asString()}::class.java")
+                }
+                appendLine("    }")
+                appendLine()
                 // 结束类
                 appendLine("}")
             }
@@ -114,9 +182,7 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
         }
     }
 
-    inner class AppKSVisitor(
-        private val resolver: Resolver, private val environment: SymbolProcessorEnvironment
-    ) : KSVisitorVoid() {
+    inner class AppKSVisitor : KSVisitorVoid() {
         @OptIn(KspExperimental::class)
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
             val moduleNames = mutableSetOf<String>()
