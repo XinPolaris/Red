@@ -1,6 +1,6 @@
 package com.xin.dev.main;
 
-import com.axon.dev.modulex.api.anno.Service;
+import com.xin.dev.modulex.api.anno.Service;
 import com.xin.dev.main.api.MainApi2;
 
 /**

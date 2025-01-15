@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import com.axon.dev.modulex.api.anno.Clazz
+import com.xin.dev.modulex.api.anno.Clazz
 import com.xin.dev.main.ui.theme.RedTheme
 
 @Clazz("activity://main/MainActivity")

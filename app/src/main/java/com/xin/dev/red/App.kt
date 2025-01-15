@@ -1,8 +1,8 @@
 package com.xin.dev.red
 
 import android.app.Application
-import com.axon.dev.modulex.ModuleX
-import com.axon.dev.modulex.api.anno.App
+import com.xin.dev.modulex.ModuleX
+import com.xin.dev.modulex.api.anno.App
 import com.xin.dev.main.api.MainApi
 
 /**

@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.axon.dev.modulex"
+    namespace = "com.xin.dev.modulex"
     compileSdk = 35
 
     defaultConfig {

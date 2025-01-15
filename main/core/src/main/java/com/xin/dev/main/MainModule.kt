@@ -2,8 +2,8 @@ package com.xin.dev.main
 
 import android.app.Application
 import android.util.Log
-import com.axon.dev.modulex.api.IModule
-import com.axon.dev.modulex.api.anno.Module
+import com.xin.dev.modulex.api.IModule
+import com.xin.dev.modulex.api.anno.Module
 
 /**
  *  Created by HuangXin on 2025/1/14.

@@ -1,4 +1,4 @@
-package com.axon.dev.modulex
+package com.xin.dev.modulex
 
 import org.junit.Assert.*
 import org.junit.Test
