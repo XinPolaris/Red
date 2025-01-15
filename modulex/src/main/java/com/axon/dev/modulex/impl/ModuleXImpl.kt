@@ -3,7 +3,7 @@ package com.axon.dev.modulex.impl
 import android.app.Application
 import android.util.Log
 import com.axon.dev.modulex.ModuleX
-import com.axon.dev.modulex.proxy.IAppProxy
+import com.axon.dev.modulex.proxy.AppProxy
 import com.axon.dev.modulex.util.Utils
 import java.lang.reflect.Method
 import java.lang.reflect.Proxy
@@ -15,16 +15,16 @@ import java.util.concurrent.ConcurrentHashMap
 @Suppress("UNCHECKED_CAST")
 internal class ModuleXImpl {
     private val servicesMap = ConcurrentHashMap<Class<*>, Any>()
-    private lateinit var appProxy: IAppProxy
+    private lateinit var appProxy: AppProxy
 
     fun init(application: Application) {
         try {
             val clazz = Class.forName("${NAME_APP_PACKAGE}.${NAME_APP_NAME}")
-            appProxy = clazz.getDeclaredConstructor().newInstance() as? IAppProxy ?: IAppProxy()
+            appProxy = clazz.getDeclaredConstructor().newInstance() as? AppProxy ?: AppProxy()
         } catch (cls: ClassNotFoundException) {
             Log.e(TAG, "ModuleX initialization failed")
         }
-        if (!::appProxy.isInitialized) appProxy = IAppProxy()
+        if (!::appProxy.isInitialized) appProxy = AppProxy()
         appProxy.init()
         appProxy.onCreate(application)
     }

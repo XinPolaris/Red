@@ -14,50 +14,46 @@ import com.google.devtools.ksp.symbol.KSAnnotated
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSDeclaration
 import com.google.devtools.ksp.symbol.KSVisitorVoid
-import com.google.devtools.ksp.validate
-
 
 class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : SymbolProcessor {
 
-    private val serviceImplList = mutableListOf<KSClassDeclaration>()
-    private val clazzList = mutableListOf<KSClassDeclaration>()
+    private val serviceImplSet = mutableSetOf<KSClassDeclaration>()
+    private val clazzSet = mutableSetOf<KSClassDeclaration>()
 
     override fun process(resolver: Resolver): List<KSAnnotated> {
         val ret = mutableListOf<KSAnnotated>()
-        process(ret, resolver, Clazz::class.qualifiedName!!, ClazzKSVisitor(environment))
-        process(ret, resolver, Service::class.qualifiedName!!, ServiceKSVisitor(environment))
-        process(ret, resolver, Module::class.qualifiedName!!, ModuleKSVisitor(environment))
-        process(ret, resolver, App::class.qualifiedName!!, AppKSVisitor(resolver, environment))
+        process(resolver, Clazz::class.qualifiedName!!, ClazzKSVisitor())
+        process(resolver, Service::class.qualifiedName!!, ServiceKSVisitor())
+        process(resolver, Module::class.qualifiedName!!, ModuleKSVisitor(environment))
+        process(resolver, App::class.qualifiedName!!, AppKSVisitor(resolver, environment))
         return ret
     }
 
     private fun process(
-        items: MutableList<KSAnnotated>,
         resolver: Resolver,
         annotationName: String,
         visitor: KSVisitorVoid
     ) {
         val symbols = resolver.getSymbolsWithAnnotation(annotationName)
-        symbols.toList().forEach {
-            if (!it.validate()) {
-                items.add(it)
-            } else {
-                it.accept(visitor, Unit)
+        symbols.toList().forEach { declaration ->
+            if (declaration !is KSClassDeclaration) {
+                val qualifiedName =
+                    (declaration as? KSDeclaration)?.qualifiedName?.asString() ?: "Unknown"
+                throw IllegalArgumentException("Expected a class, but found: $qualifiedName.($annotationName)")
             }
+            declaration.accept(visitor, Unit)
         }
     }
 
-    inner class ClazzKSVisitor(private val environment: SymbolProcessorEnvironment) :
-        KSVisitorVoid() {
+    inner class ClazzKSVisitor : KSVisitorVoid() {
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
-            clazzList.add(classDeclaration)
+            clazzSet.add(classDeclaration)
         }
     }
 
-    inner class ServiceKSVisitor(private val environment: SymbolProcessorEnvironment) :
-        KSVisitorVoid() {
+    inner class ServiceKSVisitor : KSVisitorVoid() {
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
-            serviceImplList.add(classDeclaration)
+            serviceImplSet.add(classDeclaration)
         }
     }
 
@@ -69,10 +65,10 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
             val packageName = classDeclaration.packageName.asString()
 
             // 生成代理类名
-            val proxyClassPackageName = NAME_MODULE_PACKAGE
             val proxyClassName = "${packageName.replace('.', '_')}_${className}Proxy"
+            val proxyClassPackageName = NAME_MODULE_PACKAGE
 
-            // 创建 IModuleProxy 实现类的代码
+            // 创建 ModuleProxy 实现类的代码
             val fileContent = buildString {
                 // 包名
                 appendLine("package $proxyClassPackageName")
@@ -80,15 +76,10 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
                 // 导入语句
                 appendLine("import android.app.Application")
                 appendLine("import com.axon.dev.modulex.proxy.Creator")
-                appendLine("import com.axon.dev.modulex.proxy.IModuleProxy")
-                serviceImplList.forEach { serviceImpl ->
-                    val serviceFullName = serviceImpl.superTypes.first()
-                        .resolve().declaration.qualifiedName?.asString()
-                    appendLine("import $serviceFullName")
-                }
+                appendLine("import com.axon.dev.modulex.proxy.ModuleProxy")
                 appendLine()
                 // 生成类声明
-                appendLine("class $proxyClassName : IModuleProxy() {")
+                appendLine("class $proxyClassName : ModuleProxy() {")
                 // 属性声明
                 appendLine()
                 appendLine("    private val module = ${classDeclaration.qualifiedName?.asString()}()")
@@ -100,11 +91,13 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
                 appendLine()
                 // 生成 initServices 方法
                 appendLine("    override fun initServices(services: MutableMap<Class<*>, Creator<*>>) {")
-                serviceImplList.forEach { serviceImpl ->
-                    val serviceClass = serviceImpl.superTypes.first().resolve()
-                    appendLine("        services[${serviceClass}::class.java] = object : Creator<$serviceClass> {")
-                    appendLine("            override fun create(): $serviceClass = ${serviceImpl.qualifiedName?.asString()}()")
-                    appendLine("        }")
+                serviceImplSet.forEach { serviceImpl ->
+                    val superType = serviceImpl.superTypes.firstOrNull()?.resolve()?.declaration
+                    superType?.qualifiedName?.asString()?.let { serviceFullName ->
+                        appendLine("        services[${serviceFullName}::class.java] = object : Creator<$serviceFullName> {")
+                        appendLine("            override fun create(): $serviceFullName = ${serviceImpl.qualifiedName?.asString()}()")
+                        appendLine("        }")
+                    }
                 }
                 appendLine("    }")
                 // 结束类
@@ -127,28 +120,25 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
         @OptIn(KspExperimental::class)
         override fun visitClassDeclaration(classDeclaration: KSClassDeclaration, data: Unit) {
             val moduleNames = mutableSetOf<String>()
-            val metas: Sequence<KSDeclaration> =
-                resolver.getDeclarationsFromPackage(NAME_MODULE_PACKAGE)
-            val si = metas.iterator()
+            val si = resolver.getDeclarationsFromPackage(NAME_MODULE_PACKAGE).iterator()
             while (si.hasNext()) {
-                val it = si.next() as KSAnnotated
-                val ksClazz = it as? KSClassDeclaration
+                val ksClazz = si.next() as? KSClassDeclaration
                 ksClazz?.qualifiedName?.asString()?.let {
                     moduleNames.add(it)
                 }
             }
-            val className = NAME_APP_NAME
-            val packageName = NAME_APP_PACKAGE
+            val proxyClassName = NAME_APP_NAME
+            val proxyClassPackageName = NAME_APP_PACKAGE
 
             val fileContent = buildString {
-                appendLine("package $packageName")
+                appendLine("package $proxyClassPackageName")
                 appendLine()
-                appendLine("import com.axon.dev.modulex.proxy.IAppProxy")
-                appendLine("import com.axon.dev.modulex.proxy.IModuleProxy")
+                appendLine("import com.axon.dev.modulex.proxy.AppProxy")
+                appendLine("import com.axon.dev.modulex.proxy.ModuleProxy")
                 appendLine()
-                appendLine("class $className: IAppProxy() {")
+                appendLine("class $proxyClassName: AppProxy() {")
                 appendLine()
-                appendLine("    override fun initModules(modules: MutableList<IModuleProxy>) {")
+                appendLine("    override fun initModules(modules: MutableList<ModuleProxy>) {")
                 moduleNames.forEach { moduleName ->
                     appendLine("        modules.add($moduleName())")
                 }
@@ -158,7 +148,9 @@ class ModuleXProcessor(private val environment: SymbolProcessorEnvironment) : Sy
 
             // 写入文件
             val generatedFile = environment.codeGenerator.createNewFile(
-                Dependencies(true, classDeclaration.containingFile!!), packageName, className
+                Dependencies(true, classDeclaration.containingFile!!),
+                proxyClassPackageName,
+                proxyClassName
             )
             generatedFile.write(fileContent.toByteArray())
             generatedFile.close()

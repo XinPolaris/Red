@@ -6,8 +6,8 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  *  Created by HuangXin on 2025/1/13.
  */
-open class IAppProxy {
-    private val modules = mutableListOf<IModuleProxy>()
+open class AppProxy {
+    private val modules = mutableListOf<ModuleProxy>()
     internal val services = ConcurrentHashMap<Class<*>, Creator<*>>()
 
     fun init() {
@@ -17,7 +17,7 @@ open class IAppProxy {
         }
     }
 
-    open fun initModules(modules: MutableList<IModuleProxy>) {}
+    open fun initModules(modules: MutableList<ModuleProxy>) {}
 
     fun onCreate(application: Application) {
         modules.forEach { it.onCreate(application) }

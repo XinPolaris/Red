@@ -1,4 +1,4 @@
-package com.xin.dev.main
+package com.xin.dev.posts
 
 import android.app.Application
 import android.util.Log
@@ -6,15 +6,15 @@ import com.axon.dev.modulex.api.IModule
 import com.axon.dev.modulex.api.anno.Module
 
 /**
- *  Created by HuangXin on 2025/1/14.
+ *  Created by HuangXin on 2025/1/15.
  */
 @Module
-class MainModule : IModule {
+class PostsModule : IModule {
     override fun onCreate(application: Application) {
         Log.i(TAG, "onCreate: ")
     }
 
     companion object {
-        private const val TAG = "MainModule"
+        private const val TAG = "PostsModule"
     }
 }

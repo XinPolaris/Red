@@ -21,7 +21,6 @@ dependencyResolutionManagement {
 
 include(":app")
 include(":main:core")
-include(":splash")
 include(":posts")
 include(":modulex-anno")
 include(":modulex-processor")

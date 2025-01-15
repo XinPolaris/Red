@@ -2,4 +2,4 @@ package com.axon.dev.modulex.api.anno
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
-annotation class Clazz()
+annotation class Clazz(val uri: String)
